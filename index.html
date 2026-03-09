@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sterrenhemel">
+<meta name="theme-color" content="#06060f">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%2306060f' width='100' height='100' rx='20'/><text y='68' x='50' text-anchor='middle' font-size='55'>✦</text></svg>">
+<title>Sterrenhemel — Marum</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Libre+Franklin:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #06060f;
+  --card: #0b0b1a;
+  --card-border: #14142a;
+  --card-hover: #1a1a35;
+  --text: #c8d0e4;
+  --text-dim: #5a6080;
+  --text-faint: #333850;
+  --accent-blue: #5080d0;
+  --accent-green: #40d88a;
+  --accent-yellow: #e8c040;
+  --accent-red: #e05858;
+  --accent-purple: #9070d8;
+  --radius: 14px;
+  --font-display: 'Outfit', system-ui, sans-serif;
+  --font-body: 'Libre Franklin', system-ui, sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-thumb { background: #1a1a30; border-radius: 2px; }
+a { color: inherit; text-decoration: none; }
+
+/* Star canvas */
+#starfield {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+}
+
+/* Header */
+.header {
+  position: sticky; top: 0; z-index: 100;
+  background: linear-gradient(180deg, var(--bg) 60%, transparent);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  padding: 20px 20px 0;
+}
+.header-top {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 2px;
+}
+.header h1 {
+  font-family: var(--font-display);
+  font-size: 21px; font-weight: 700; letter-spacing: -0.3px;
+  background: linear-gradient(135deg, #d0d8f0 0%, #7888b8 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.header .subtitle {
+  font-size: 12px; color: var(--text-dim); margin-left: 36px;
+}
+.header .star-icon {
+  font-size: 24px; filter: drop-shadow(0 0 8px rgba(100,140,220,0.3));
+}
+
+/* Tabs */
+.tabs {
+  display: flex; gap: 2px; margin-top: 16px;
+  border-bottom: 1px solid var(--card-border);
+}
+.tab-btn {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 5px;
+  padding: 11px 0; border: none; cursor: pointer;
+  background: transparent; color: var(--text-faint);
+  font-size: 12px; font-weight: 600; font-family: var(--font-body);
+  border-bottom: 2px solid transparent;
+  border-radius: 8px 8px 0 0; transition: all 0.25s ease;
+}
+.tab-btn.active {
+  background: #0e0e22; color: var(--text);
+  border-bottom-color: var(--accent-blue);
+}
+.tab-btn .tab-icon { font-size: 15px; }
+
+/* Content */
+.content {
+  position: relative; z-index: 1;
+  padding: 18px 18px 100px;
+}
+.tab-panel { display: none; animation: fadeUp 0.35s ease; }
+.tab-panel.active { display: block; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Cards */
+.card {
+  padding: 16px 18px; border-radius: var(--radius);
+  background: var(--card); border: 1px solid var(--card-border);
+  transition: border-color 0.2s;
+}
+.card:hover { border-color: var(--card-hover); }
+.card + .card { margin-top: 10px; }
+
+.card-title {
+  font-family: var(--font-display);
+  font-size: 15px; font-weight: 600; color: #d0d8f0;
+  line-height: 1.35; margin-bottom: 6px;
+}
+.card-body {
+  font-size: 13px; color: var(--text-dim); line-height: 1.55;
+}
+
+/* Tags */
+.tag {
+  display: inline-block; padding: 2px 10px; border-radius: 20px;
+  font-size: 10px; font-weight: 600; letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+/* Filter pills */
+.filters { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 14px; }
+.filter-btn {
+  padding: 5px 13px; border-radius: 20px; font-size: 11px; font-weight: 500;
+  font-family: var(--font-body); cursor: pointer;
+  background: #0a0a16; color: var(--text-faint);
+  border: 1px solid var(--card-border); transition: all 0.2s;
+}
+.filter-btn.active {
+  background: #14143a; color: #a0b0e0; border-color: var(--accent-blue);
+}
+
+/* Score widget */
+.score-box {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 18px; border-radius: var(--radius);
+  margin-bottom: 18px;
+}
+.score-number {
+  font-family: var(--font-display);
+  font-size: 38px; font-weight: 700; line-height: 1;
+}
+.score-label {
+  font-size: 12px; color: var(--text-dim); margin-bottom: 3px;
+}
+.score-badge {
+  padding: 6px 14px; border-radius: 10px;
+  font-size: 12px; font-weight: 600; font-family: var(--font-body);
+}
+
+/* Weather grid */
+.weather-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px;
+}
+.weather-cell {
+  padding: 10px 12px; border-radius: 10px;
+  background: #08081a; border: 1px solid #10102a;
+}
+.weather-cell .label { font-size: 10px; color: var(--text-faint); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.5px; }
+.weather-cell .value {
+  font-family: var(--font-display); font-size: 20px; font-weight: 600;
+}
+
+/* Object list */
+.sky-object {
+  display: flex; gap: 12px; padding: 11px 12px;
+  border-radius: 10px; background: #08081a; border: 1px solid #0e0e20;
+}
+.sky-object + .sky-object { margin-top: 8px; }
+.sky-object .icon { font-size: 22px; width: 30px; text-align: center; flex-shrink: 0; padding-top: 2px; }
+.sky-object .name {
+  font-family: var(--font-display); font-size: 14px; font-weight: 600; color: #c0c8e0;
+}
+.sky-object .mag { font-size: 11px; color: var(--text-faint); margin-left: 6px; }
+.sky-object .info { font-size: 12px; color: var(--text-dim); line-height: 1.5; margin-top: 3px; }
+.sky-object .tip { color: #4a8878; }
+
+/* Meteor rating */
+.stars { letter-spacing: 1px; font-size: 13px; }
+.stars .on { color: var(--accent-yellow); }
+.stars .off { color: #222; }
+
+/* Meteor card extras */
+.meteor-meta {
+  display: flex; justify-content: space-between;
+  font-size: 11px; color: var(--text-faint); margin-bottom: 3px;
+}
+.badge-soon, .badge-top {
+  display: inline-block; font-size: 9px; font-weight: 700;
+  padding: 2px 7px; border-radius: 8px; margin-left: 6px;
+  vertical-align: middle;
+}
+.badge-soon { background: #0e2e1e; color: var(--accent-green); }
+.badge-top { background: #2e2510; color: var(--accent-yellow); }
+
+/* Dark sky spot */
+.bortle-badge {
+  padding: 3px 10px; border-radius: 8px;
+  font-size: 10px; font-weight: 600;
+  background: #081828; color: #5ab0e0; border: 1px solid #103050;
+}
+.spot-tip {
+  padding: 9px 12px; border-radius: 8px;
+  font-size: 12px; background: #060e14; color: #4a8a78;
+  border: 1px solid #0e201a; line-height: 1.5; margin-top: 8px;
+}
+
+/* Section title */
+.section-title {
+  font-family: var(--font-display);
+  font-size: 15px; font-weight: 600; color: #8898c0;
+  margin-bottom: 12px; margin-top: 4px;
+}
+
+/* Planet event row */
+.planet-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px; border-radius: 10px;
+  background: #0a0a18; border: 1px solid var(--card-border);
+}
+.planet-row + .planet-row { margin-top: 6px; }
+.planet-row .p-icon { font-size: 19px; width: 28px; text-align: center; }
+.planet-row .p-event { font-family: var(--font-display); font-size: 13px; font-weight: 600; color: #c0c8e0; }
+.planet-row .p-date { font-size: 11px; color: var(--text-faint); }
+
+/* Loading */
+.loading {
+  text-align: center; padding: 40px; color: var(--text-dim);
+}
+.loading .spinner { font-size: 28px; margin-bottom: 10px; animation: shimmer 1.5s infinite; }
+
+/* Reasons */
+.reasons { font-size: 12px; color: var(--text-dim); line-height: 1.7; }
+.reasons div::before { content: "• "; color: var(--text-faint); }
+
+/* PWA install banner */
+.install-hint {
+  display: none; position: fixed; bottom: 16px; left: 16px; right: 16px;
+  z-index: 200; padding: 14px 18px; border-radius: 14px;
+  background: #12123a; border: 1px solid #2a2a60;
+  font-size: 13px; color: #a0b0d8; text-align: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+.install-hint.show { display: block; animation: fadeUp 0.4s ease; }
+.install-hint .close-hint {
+  position: absolute; top: 8px; right: 12px;
+  background: none; border: none; color: #556; font-size: 18px; cursor: pointer;
+}
+</style>
+</head>
+<body>
+
+<canvas id="starfield"></canvas>
+
+<div class="header">
+  <div class="header-top">
+    <span class="star-icon">✦</span>
+    <h1>Sterrenhemel</h1>
+  </div>
+  <div class="subtitle" id="dateSubtitle"></div>
+  <div class="tabs" id="tabs">
+    <button class="tab-btn active" data-tab="news"><span class="tab-icon">📰</span> Nieuws</button>
+    <button class="tab-btn" data-tab="tonight"><span class="tab-icon">🔭</span> Vanavond</button>
+    <button class="tab-btn" data-tab="calendar"><span class="tab-icon">📅</span> Kalender</button>
+    <button class="tab-btn" data-tab="darksky"><span class="tab-icon">🌌</span> Dark Sky</button>
+  </div>
+</div>
+
+<div class="content">
+  <!-- NEWS -->
+  <div class="tab-panel active" id="panel-news">
+    <div class="filters" id="newsFilters"></div>
+    <div id="newsList"></div>
+  </div>
+
+  <!-- TONIGHT -->
+  <div class="tab-panel" id="panel-tonight">
+    <div class="card" style="margin-bottom:14px">
+      <div class="section-title">🔭 Kan ik vanavond sterren kijken?</div>
+      <div id="weatherWidget">
+        <div class="loading"><div class="spinner">🔭</div><div>Weerdata ophalen voor Marum...</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-title" style="margin-bottom:14px">Wat is er vanavond te zien?</div>
+      <div id="skyObjects"></div>
+    </div>
+  </div>
+
+  <!-- CALENDAR -->
+  <div class="tab-panel" id="panel-calendar">
+    <div class="section-title">☄️ Meteorenregens 2026</div>
+    <div id="meteorList" style="margin-bottom:24px"></div>
+    <div class="section-title">🪐 Planeet-events 2026</div>
+    <div id="planetList"></div>
+  </div>
+
+  <!-- DARK SKY -->
+  <div class="tab-panel" id="panel-darksky">
+    <p class="card-body" style="margin-bottom:16px">De beste donkere locaties bij Marum voor sterrenkijken en astrofotografie. Bortle-schaal: 1 (donkerst) – 9 (stadscentrum).</p>
+    <div id="darkSkyList"></div>
+  </div>
+</div>
+
+<div class="install-hint" id="installHint">
+  <button class="close-hint" onclick="document.getElementById('installHint').classList.remove('show')">&times;</button>
+  📱 Voeg toe aan je beginscherm via <strong>Delen → Zet op beginscherm</strong> voor de volledige app-ervaring!
+</div>
+
+<script>
+// ===== DATA =====
+const NEWS = [
+  { id:1, date:"9 mrt 2026", title:"Jupiter domineert de avondhemel in maart", summary:"Jupiter staat hoog aan de zuidelijke hemel in Gemini en bereikt 60° hoogte. Tot 11 maart zichtbaar onder ware duisternis.", source:"BBC Sky at Night", url:"https://www.skyatnightmagazine.com/news/jupiter-march-2026", tag:"Planeten" },
+  { id:2, date:"3 mrt 2026", title:"Totale maansverduistering — Blood Moon", summary:"Op 3 maart verduisterde de aarde de volle maan volledig. Totaliteit duurde ~58 minuten. De volgende Blood Moon laat bijna drie jaar op zich wachten.", source:"NASA", url:"https://science.nasa.gov/solar-system/whats-up-march-2026-skywatching-tips-from-nasa/", tag:"Eclips" },
+  { id:3, date:"7–8 mrt 2026", title:"Venus-Saturnus conjunctie", summary:"Venus (mag –3.9) en Saturnus (mag 1.0) staan slechts ~1° uit elkaar laag aan de westelijke hemel na zonsondergang.", source:"Astronomy Magazine", url:"https://www.astronomy.com/observing/sky-this-month-march-2026/", tag:"Conjunctie" },
+  { id:4, date:"5 mrt 2026", title:"Verste hydroxyl megamaser ooit ontdekt", summary:"Astronomen hebben met de MeerKAT-radiotelescoop de verste hydroxyl megamaser ooit gedetecteerd, op meer dan 8 miljard lichtjaar afstand.", source:"Universe Today", url:"https://www.universetoday.com/", tag:"Ontdekking" },
+  { id:5, date:"5 mrt 2026", title:"Asteroïde 2024 YR4 raakt de maan niet", summary:"NASA heeft bevestigd dat er geen kans is dat asteroïde 2024 YR4 de maan raakt in 2032.", source:"Universe Today", url:"https://www.universetoday.com/", tag:"Asteroïde" },
+  { id:6, date:"5 mrt 2026", title:"Hubble-constante via zwaartekrachtsgolven", summary:"Een team heeft een nieuwe methode ontwikkeld om de Hubble-constante te berekenen met zwaartekrachtsgolven.", source:"Universe Today", url:"https://www.universetoday.com/", tag:"Kosmologie" },
+  { id:7, date:"20 mrt 2026", title:"Lente-equinox — Astronomische lente begint", summary:"Op 20 maart om 14:46 UTC kruist de zon de hemelequator. Aurora's komen vaker voor rond de equinox.", source:"TimeAndDate", url:"https://www.timeanddate.com/news/astronomy/night-sky-march-2026", tag:"Seizoen" },
+  { id:8, date:"10 mrt 2026", title:"NASA Astrophysics Division Update", summary:"NASA presenteert updates over recente ontdekkingen en plannen richting Astro 2030, met twee workshops in 2026.", source:"NASA", url:"https://science.nasa.gov/astrophysics/programs/physics-of-the-cosmos/community/nasa-astrophysics-division-update-10-march-2026/", tag:"NASA" }
+];
+
+const METEORS = [
+  { name:"Quadrantiden", peak:"3–4 jan", zhr:110, moon:"100%", rating:1, month:1, note:"Volle maan verstoorde zicht volledig" },
+  { name:"Lyriden", peak:"21–22 apr", zhr:18, moon:"33%", rating:4, month:4, note:"Donkere hemel! Beste na middernacht" },
+  { name:"Eta Aquariden", peak:"5–6 mei", zhr:50, moon:"84%", rating:2, month:5, note:"Maanlicht verstoort helaas veel" },
+  { name:"Perseïden", peak:"12–13 aug", zhr:100, moon:"0%", rating:5, month:8, note:"BESTE KANS 2026! Nieuwe maan = perfecte condities" },
+  { name:"Draconiden", peak:"8–9 okt", zhr:10, moon:"1%", rating:3, month:10, note:"Klein maar donkere hemel, vroege avond" },
+  { name:"Orioniden", peak:"21 okt", zhr:20, moon:"~80%", rating:2, month:10, note:"Maanlicht hindert, alleen helderste zichtbaar" },
+  { name:"Leoniden", peak:"16–17 nov", zhr:15, moon:"45%", rating:3, month:11, note:"Halve maan, redelijke condities" },
+  { name:"Geminiden", peak:"13–14 dec", zhr:150, moon:"~20%", rating:5, month:12, note:"Grootste shower! Minimale maanlicht" },
+  { name:"Ursiden", peak:"21–22 dec", zhr:10, moon:"94%", rating:1, month:12, note:"Bijna volle maan, lastig" }
+];
+
+const PLANETS = [
+  { date:"Maart", event:"Jupiter hoog in Gemini (avond)", icon:"♃" },
+  { date:"7–8 mrt", event:"Venus-Saturnus conjunctie", icon:"♀♄" },
+  { date:"22 mrt", event:"Neptunus conjunctie met zon", icon:"♆" },
+  { date:"25 mrt", event:"Saturnus conjunctie met zon", icon:"♄" },
+  { date:"4 apr", event:"Mercurius greatest elongation", icon:"☿" },
+  { date:"Sep 2026", event:"JUICE Earth flyby (9.000 km)", icon:"🛰️" },
+  { date:"Nov 2026", event:"Uranus oppositie", icon:"♅" }
+];
+
+const DARK_SPOTS = [
+  { name:"Lauwersmeer", distance:"~35 km", bortle:"3–4", desc:"Nationaal Park, officieel Dark Sky Park. Beste locatie in Noord-Nederland.", tip:"Ga naar de zuidkant van het meer voor minste lichtvervuiling richting noorden." },
+  { name:"Terschelling", distance:"~90 km + veerboot", bortle:"2–3", desc:"Het donkerste stuk Nederland. Spectaculair voor Melkweg-fotografie.", tip:"Boschplaat aan de oostkant is het donkerst. Neem warme kleding mee!" },
+  { name:"Fochteloërveen", distance:"~25 km", bortle:"4", desc:"Hoogveengebied met weinig lichtvervuiling. Dichtbij en toegankelijk.", tip:"Parkeer bij de ingang en loop het pad op. Vlak terrein = groot hemelbereik." },
+  { name:"Bargerveen", distance:"~100 km", bortle:"3–4", desc:"Groot natuurgebied in Zuidoost-Drenthe, ver van grote steden.", tip:"Combineer met een bezoek aan het veenmuseum overdag." }
+];
+
+const SKY_OBJECTS = [
+  { obj:"Jupiter", where:"Hoog in het zuiden, in Gemini", mag:"–2.3", icon:"♃", tip:"Perfect voor je telescoop! Probeer de Galileïsche manen." },
+  { obj:"Venus", where:"Laag in het westen na zonsondergang", mag:"–3.9", icon:"♀", tip:"Schitterend helder, maar zakt snel onder de horizon." },
+  { obj:"Mars", where:"Aan de ochtendhemel voor zonsopkomst", mag:"1.4", icon:"♂", tip:"Beter zichtbaar later dit jaar." },
+  { obj:"Orion", where:"Hoog in het zuidwesten", mag:"", icon:"⭐", tip:"Orionnevel (M42) — prachtig door telescoop!" }
+];
+
+const TAG_COLORS = {
+  Planeten:{bg:"#0e0e30",text:"#8090e0",border:"#8090e030"},
+  Eclips:{bg:"#200e10",text:"#e06058",border:"#e0605830"},
+  Conjunctie:{bg:"#0e200e",text:"#60d070",border:"#60d07030"},
+  Ontdekking:{bg:"#201a08",text:"#d8b040",border:"#d8b04030"},
+  "Asteroïde":{bg:"#0e1a20",text:"#50c0d0",border:"#50c0d030"},
+  Kosmologie:{bg:"#1a0e20",text:"#b070e0",border:"#b070e030"},
+  Seizoen:{bg:"#082018",text:"#48d890",border:"#48d89030"},
+  NASA:{bg:"#0e0e2a",text:"#6080d8",border:"#6080d830"}
+};
+
+// ===== STARFIELD =====
+(function(){
+  const c = document.getElementById('starfield');
+  const ctx = c.getContext('2d');
+  let stars = [];
+  function resize(){
+    c.width = window.innerWidth; c.height = window.innerHeight;
+    stars = Array.from({length:100}, ()=>({
+      x:Math.random()*c.width, y:Math.random()*c.height,
+      r:Math.random()*1.4+0.3, a:Math.random()*0.6+0.3,
+      sp:Math.random()*0.006+0.002, ph:Math.random()*Math.PI*2
+    }));
+  }
+  resize(); window.addEventListener('resize', resize);
+  function draw(t){
+    ctx.clearRect(0,0,c.width,c.height);
+    stars.forEach(s=>{
+      const f = 0.5+0.5*Math.sin(t*s.sp+s.ph);
+      ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(180,200,240,${s.a*f})`; ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+
+// ===== DATE =====
+const now = new Date();
+document.getElementById('dateSubtitle').textContent =
+  'Marum, Groningen — ' + now.toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+// ===== TABS =====
+document.getElementById('tabs').addEventListener('click', e=>{
+  const btn = e.target.closest('.tab-btn');
+  if(!btn) return;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
+});
+
+// ===== NEWS =====
+let currentFilter = 'all';
+function renderNews(){
+  const tags = ['all', ...new Set(NEWS.map(n=>n.tag))];
+  document.getElementById('newsFilters').innerHTML = tags.map(t=>
+    `<button class="filter-btn ${currentFilter===t?'active':''}" data-filter="${t}">${t==='all'?'Alles':t}</button>`
+  ).join('');
+  const items = currentFilter==='all' ? NEWS : NEWS.filter(n=>n.tag===currentFilter);
+  document.getElementById('newsList').innerHTML = items.map(item=>{
+    const tc = TAG_COLORS[item.tag]||{bg:'#222',text:'#888',border:'#88888830'};
+    return `<a href="${item.url}" target="_blank" rel="noopener" class="card" style="display:block;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
+        <span class="tag" style="background:${tc.bg};color:${tc.text};border:1px solid ${tc.border}">${item.tag}</span>
+        <span style="font-size:11px;color:var(--text-faint)">${item.date}</span>
+      </div>
+      <div class="card-title">${item.title}</div>
+      <div class="card-body">${item.summary}</div>
+      <div style="font-size:11px;color:var(--text-faint);margin-top:7px">${item.source} ↗</div>
+    </a>`;
+  }).join('');
+}
+renderNews();
+document.getElementById('newsFilters').addEventListener('click', e=>{
+  const btn = e.target.closest('.filter-btn');
+  if(!btn) return;
+  currentFilter = btn.dataset.filter;
+  renderNews();
+});
+
+// ===== WEATHER =====
+async function fetchWeather(){
+  try {
+    const h = now.getHours();
+    const target = h<16?21:(h<23?h+1:23);
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=53.1439&longitude=6.2642&hourly=cloud_cover,temperature_2m,relative_humidity_2m,wind_speed_10m,visibility&timezone=Europe/Amsterdam&forecast_days=1`);
+    const data = await res.json();
+    const hr = data.hourly;
+    const cc = Math.round(hr.cloud_cover[target]);
+    const temp = Math.round(hr.temperature_2m[target]);
+    const hum = Math.round(hr.relative_humidity_2m[target]);
+    const wind = Math.round(hr.wind_speed_10m[target]);
+
+    let score = 100;
+    if(cc>80) score-=50; else if(cc>60) score-=35; else if(cc>40) score-=20; else if(cc>20) score-=8;
+    if(hum>90) score-=15; else if(hum>80) score-=8;
+    if(wind>30) score-=15; else if(wind>20) score-=8;
+    if(temp<-5) score-=5;
+    score = Math.max(0,Math.min(100,score));
+
+    const reasons = [];
+    if(cc<20) reasons.push("Heldere hemel — uitstekende condities!");
+    else if(cc<40) reasons.push("Grotendeels helder, goede zichtbaarheid.");
+    else if(cc<60) reasons.push("Gedeeltelijk bewolkt — sterren deels zichtbaar.");
+    else reasons.push("Veel bewolking — beperkt zicht op sterren.");
+    if(hum>85) reasons.push("Hoge luchtvochtigheid kan waas veroorzaken.");
+    if(wind>25) reasons.push("Sterke wind — telescoop extra stabiliseren.");
+    if(temp<0) reasons.push("Onder het vriespunt — kleed je warm aan!");
+    else if(temp<5) reasons.push("Fris vanavond — warme kleding aanbevolen.");
+
+    const col = score>=70?'var(--accent-green)':score>=40?'var(--accent-yellow)':'var(--accent-red)';
+    const emoji = score>=70?'🌟':score>=40?'🌤️':'☁️';
+    const label = score>=70?'Ga naar buiten!':score>=40?'Matig':'Beter wachten';
+
+    document.getElementById('weatherWidget').innerHTML = `
+      <div class="score-box" style="background:${col}08;border:1px solid ${col}25">
+        <div style="font-size:40px">${emoji}</div>
+        <div style="flex:1">
+          <div class="score-label">Stargazing Score vanavond</div>
+          <div class="score-number" style="color:${col}">${score}<span style="font-size:17px;color:var(--text-faint)">/100</span></div>
+        </div>
+        <div class="score-badge" style="background:${col}15;color:${col}">${label}</div>
+      </div>
+      <div class="weather-grid">
+        <div class="weather-cell"><div class="label">Bewolking</div><div class="value" style="color:${cc<40?'#c8d8f0':'#887766'}">${cc}%</div></div>
+        <div class="weather-cell"><div class="label">Temperatuur</div><div class="value" style="color:${temp>0?'#c8d8f0':'#887766'}">${temp}°C</div></div>
+        <div class="weather-cell"><div class="label">Luchtvochtigheid</div><div class="value" style="color:${hum<80?'#c8d8f0':'#887766'}">${hum}%</div></div>
+        <div class="weather-cell"><div class="label">Wind</div><div class="value" style="color:${wind<20?'#c8d8f0':'#887766'}">${wind} km/u</div></div>
+      </div>
+      <div class="reasons">${reasons.map(r=>`<div>${r}</div>`).join('')}</div>
+    `;
+  } catch(e){
+    document.getElementById('weatherWidget').innerHTML = '<div class="loading"><div>⚠️</div><div>Kon weerdata niet laden</div></div>';
+  }
+}
+fetchWeather();
+
+// ===== SKY OBJECTS =====
+document.getElementById('skyObjects').innerHTML = SKY_OBJECTS.map(s=>
+  `<div class="sky-object">
+    <div class="icon">${s.icon}</div>
+    <div>
+      <div><span class="name">${s.obj}</span>${s.mag?`<span class="mag">mag ${s.mag}</span>`:''}</div>
+      <div class="info">${s.where}<br><span class="tip">💡 ${s.tip}</span></div>
+    </div>
+  </div>`
+).join('');
+
+// ===== METEORS =====
+const cm = now.getMonth()+1;
+document.getElementById('meteorList').innerHTML = METEORS.map(m=>{
+  const past = m.month<cm;
+  const soon = !past && (m.month===cm || m.month===cm+1);
+  const stars = [1,2,3,4,5].map(i=>`<span class="${i<=m.rating&&!past?'on':'off'}">★</span>`).join('');
+  return `<div class="card" style="opacity:${past?0.4:1};${soon?'border-color:#2a2a50':''}">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+      <div>
+        <span style="font-family:var(--font-display);font-size:14px;font-weight:600;color:${past?'var(--text-faint)':'#d0d8f0'}">${m.name}</span>
+        ${soon?'<span class="badge-soon">BINNENKORT</span>':''}
+        ${m.rating>=5&&!past?'<span class="badge-top">TOP PICK</span>':''}
+      </div>
+      <div class="stars">${stars}</div>
+    </div>
+    <div class="meteor-meta"><span>Piek: ${m.peak}</span><span>ZHR: ${m.zhr} · Maan: ${m.moon}</span></div>
+    <div style="font-size:12px;color:${m.rating>=4&&!past?'#4a9a70':'var(--text-faint)'}; line-height:1.4">${m.note}</div>
+  </div>`;
+}).join('');
+
+// ===== PLANETS =====
+document.getElementById('planetList').innerHTML = PLANETS.map(p=>
+  `<div class="planet-row">
+    <div class="p-icon">${p.icon}</div>
+    <div><div class="p-event">${p.event}</div><div class="p-date">${p.date}</div></div>
+  </div>`
+).join('');
+
+// ===== DARK SKY =====
+document.getElementById('darkSkyList').innerHTML = DARK_SPOTS.map(s=>
+  `<div class="card" style="margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:7px">
+      <div class="card-title">🌌 ${s.name}</div>
+      <span class="bortle-badge">Bortle ${s.bortle}</span>
+    </div>
+    <div style="font-size:12px;color:var(--text-faint);margin-bottom:6px">📍 ${s.distance} vanaf Marum</div>
+    <div class="card-body">${s.desc}</div>
+    <div class="spot-tip">💡 Tip: ${s.tip}</div>
+  </div>`
+).join('');
+
+// ===== PWA INSTALL HINT =====
+if(window.navigator.standalone === false || window.matchMedia('(display-mode: browser)').matches){
+  setTimeout(()=> document.getElementById('installHint').classList.add('show'), 3000);
+}
+</script>
+</body>
+</html>
