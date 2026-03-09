@@ -324,17 +324,84 @@ a { color: inherit; text-decoration: none; }
 </div>
 
 <script>
-// ===== DATA =====
-const NEWS = [
-  { id:1, date:"9 mrt 2026", title:"Jupiter domineert de avondhemel in maart", summary:"Jupiter staat hoog aan de zuidelijke hemel in Gemini en bereikt 60° hoogte. Tot 11 maart zichtbaar onder ware duisternis.", source:"BBC Sky at Night", url:"https://www.skyatnightmagazine.com/news/jupiter-march-2026", tag:"Planeten" },
-  { id:2, date:"3 mrt 2026", title:"Totale maansverduistering — Blood Moon", summary:"Op 3 maart verduisterde de aarde de volle maan volledig. Totaliteit duurde ~58 minuten. De volgende Blood Moon laat bijna drie jaar op zich wachten.", source:"NASA", url:"https://science.nasa.gov/solar-system/whats-up-march-2026-skywatching-tips-from-nasa/", tag:"Eclips" },
-  { id:3, date:"7–8 mrt 2026", title:"Venus-Saturnus conjunctie", summary:"Venus (mag –3.9) en Saturnus (mag 1.0) staan slechts ~1° uit elkaar laag aan de westelijke hemel na zonsondergang.", source:"Astronomy Magazine", url:"https://www.astronomy.com/observing/sky-this-month-march-2026/", tag:"Conjunctie" },
-  { id:4, date:"5 mrt 2026", title:"Verste hydroxyl megamaser ooit ontdekt", summary:"Astronomen hebben met de MeerKAT-radiotelescoop de verste hydroxyl megamaser ooit gedetecteerd, op meer dan 8 miljard lichtjaar afstand.", source:"Universe Today", url:"https://www.universetoday.com/", tag:"Ontdekking" },
-  { id:5, date:"5 mrt 2026", title:"Asteroïde 2024 YR4 raakt de maan niet", summary:"NASA heeft bevestigd dat er geen kans is dat asteroïde 2024 YR4 de maan raakt in 2032.", source:"Universe Today", url:"https://www.universetoday.com/", tag:"Asteroïde" },
-  { id:6, date:"5 mrt 2026", title:"Hubble-constante via zwaartekrachtsgolven", summary:"Een team heeft een nieuwe methode ontwikkeld om de Hubble-constante te berekenen met zwaartekrachtsgolven.", source:"Universe Today", url:"https://www.universetoday.com/", tag:"Kosmologie" },
-  { id:7, date:"20 mrt 2026", title:"Lente-equinox — Astronomische lente begint", summary:"Op 20 maart om 14:46 UTC kruist de zon de hemelequator. Aurora's komen vaker voor rond de equinox.", source:"TimeAndDate", url:"https://www.timeanddate.com/news/astronomy/night-sky-march-2026", tag:"Seizoen" },
-  { id:8, date:"10 mrt 2026", title:"NASA Astrophysics Division Update", summary:"NASA presenteert updates over recente ontdekkingen en plannen richting Astro 2030, met twee workshops in 2026.", source:"NASA", url:"https://science.nasa.gov/astrophysics/programs/physics-of-the-cosmos/community/nasa-astrophysics-division-update-10-march-2026/", tag:"NASA" }
+// ===== RSS FEED SOURCES =====
+const RSS_FEEDS = [
+  { url: "https://www.universetoday.com/feed", source: "Universe Today", defaultTag: "Space" },
+  { url: "https://www.nasa.gov/news-release/feed/", source: "NASA", defaultTag: "NASA" },
+  { url: "https://spacenews.com/feed/", source: "SpaceNews", defaultTag: "Industrie" },
+  { url: "https://skyandtelescope.org/astronomy-news/feed/", source: "Sky & Telescope", defaultTag: "Observatie" },
+  { url: "https://www.space.com/feeds/all", source: "Space.com", defaultTag: "Space" },
 ];
+
+const RSS_PROXY = "https://api.rss2json.com/v1/api.json?rss_url=";
+
+let NEWS = []; // will be filled by RSS fetcher
+let newsLoading = true;
+
+// Auto-detect tag from title/content keywords
+function detectTag(title, desc) {
+  const t = (title + ' ' + desc).toLowerCase();
+  if (/eclipse|eclips|lunar|moon|blood moon|supermoon/.test(t)) return "Eclips";
+  if (/mars|jupiter|saturn|venus|mercury|uranus|neptune|planet|conjunct/.test(t)) return "Planeten";
+  if (/meteor|perseid|geminid|leonid|shooting star|fireball/.test(t)) return "Meteoren";
+  if (/asteroid|comet|near-earth/.test(t)) return "Asteroïde";
+  if (/galaxy|dark matter|dark energy|hubble|cosmolog|universe|big bang/.test(t)) return "Kosmologie";
+  if (/exoplanet|habitable|goldilocks|biosign|alien|life/.test(t)) return "Exoplaneten";
+  if (/telescope|observ|stargazing|night sky|astrophoto/.test(t)) return "Observatie";
+  if (/rocket|launch|spacex|starship|artemis|crew|iss|station/.test(t)) return "Ruimtevaart";
+  if (/nasa/.test(t)) return "NASA";
+  if (/sun|solar|corona|flare|aurora/.test(t)) return "Zon";
+  if (/star|supernova|neutron|pulsar|black hole/.test(t)) return "Sterren";
+  return null;
+}
+
+function stripHtml(html) {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || '';
+}
+
+function formatDate(dateStr) {
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' });
+  } catch { return dateStr; }
+}
+
+async function fetchAllFeeds() {
+  const allItems = [];
+  const fetchPromises = RSS_FEEDS.map(async (feed) => {
+    try {
+      const res = await fetch(RSS_PROXY + encodeURIComponent(feed.url));
+      const data = await res.json();
+      if (data.status === 'ok' && data.items) {
+        data.items.slice(0, 8).forEach(item => {
+          const desc = stripHtml(item.description || '').slice(0, 200);
+          const tag = detectTag(item.title || '', desc) || feed.defaultTag;
+          allItems.push({
+            id: allItems.length + Math.random(),
+            date: formatDate(item.pubDate),
+            rawDate: new Date(item.pubDate),
+            title: item.title,
+            summary: desc + (desc.length >= 200 ? '…' : ''),
+            source: feed.source,
+            url: item.link,
+            tag: tag
+          });
+        });
+      }
+    } catch (e) {
+      console.warn('Feed error:', feed.source, e);
+    }
+  });
+
+  await Promise.all(fetchPromises);
+  // Sort by date, newest first
+  allItems.sort((a, b) => b.rawDate - a.rawDate);
+  // Limit to most recent 25
+  NEWS = allItems.slice(0, 25);
+  newsLoading = false;
+}
 
 const METEORS = [
   { name:"Quadrantiden", peak:"3–4 jan", zhr:110, moon:"100%", rating:1, month:1, note:"Volle maan verstoorde zicht volledig" },
@@ -380,7 +447,15 @@ const TAG_COLORS = {
   "Asteroïde":{bg:"#0e1a20",text:"#50c0d0",border:"#50c0d030"},
   Kosmologie:{bg:"#1a0e20",text:"#b070e0",border:"#b070e030"},
   Seizoen:{bg:"#082018",text:"#48d890",border:"#48d89030"},
-  NASA:{bg:"#0e0e2a",text:"#6080d8",border:"#6080d830"}
+  NASA:{bg:"#0e0e2a",text:"#6080d8",border:"#6080d830"},
+  Meteoren:{bg:"#201810",text:"#e0a040",border:"#e0a04030"},
+  Exoplaneten:{bg:"#0e1a28",text:"#50a0d8",border:"#50a0d830"},
+  Observatie:{bg:"#18180e",text:"#b8b850",border:"#b8b85030"},
+  Ruimtevaart:{bg:"#0e1020",text:"#7090c8",border:"#7090c830"},
+  Space:{bg:"#100e20",text:"#8878c0",border:"#8878c030"},
+  Zon:{bg:"#201808",text:"#e0a830",border:"#e0a83030"},
+  Sterren:{bg:"#18101e",text:"#c070b0",border:"#c070b030"},
+  Industrie:{bg:"#101018",text:"#8888a8",border:"#8888a830"},
 };
 
 // ===== STARFIELD =====
@@ -427,13 +502,34 @@ document.getElementById('tabs').addEventListener('click', e=>{
 // ===== NEWS =====
 let currentFilter = 'all';
 function renderNews(){
+  if (newsLoading) {
+    document.getElementById('newsFilters').innerHTML = '';
+    document.getElementById('newsList').innerHTML = `
+      <div class="loading">
+        <div class="spinner">📡</div>
+        <div>Astronomie-nieuws ophalen...</div>
+        <div style="font-size:11px;color:var(--text-faint);margin-top:8px">
+          NASA · Universe Today · Space.com · Sky & Telescope · SpaceNews
+        </div>
+      </div>`;
+    return;
+  }
+  if (NEWS.length === 0) {
+    document.getElementById('newsFilters').innerHTML = '';
+    document.getElementById('newsList').innerHTML = `
+      <div class="loading">
+        <div>⚠️</div>
+        <div>Kon geen nieuws ophalen. Check je internetverbinding en herlaad de pagina.</div>
+      </div>`;
+    return;
+  }
   const tags = ['all', ...new Set(NEWS.map(n=>n.tag))];
   document.getElementById('newsFilters').innerHTML = tags.map(t=>
     `<button class="filter-btn ${currentFilter===t?'active':''}" data-filter="${t}">${t==='all'?'Alles':t}</button>`
   ).join('');
   const items = currentFilter==='all' ? NEWS : NEWS.filter(n=>n.tag===currentFilter);
   document.getElementById('newsList').innerHTML = items.map(item=>{
-    const tc = TAG_COLORS[item.tag]||{bg:'#222',text:'#888',border:'#88888830'};
+    const tc = TAG_COLORS[item.tag]||{bg:'#111',text:'#888',border:'#88888830'};
     return `<a href="${item.url}" target="_blank" rel="noopener" class="card" style="display:block;margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
         <span class="tag" style="background:${tc.bg};color:${tc.text};border:1px solid ${tc.border}">${item.tag}</span>
@@ -445,7 +541,13 @@ function renderNews(){
     </a>`;
   }).join('');
 }
-renderNews();
+renderNews(); // show loading state initially
+
+// Fetch feeds then re-render
+fetchAllFeeds().then(() => {
+  renderNews();
+});
+
 document.getElementById('newsFilters').addEventListener('click', e=>{
   const btn = e.target.closest('.filter-btn');
   if(!btn) return;
