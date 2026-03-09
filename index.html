@@ -7,7 +7,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Sterrenhemel">
 <meta name="theme-color" content="#06060f">
-<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%2306060f' width='100' height='100' rx='20'/><text y='68' x='50' text-anchor='middle' font-size='55'>✦</text></svg>">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>Sterrenhemel — Marum</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Libre+Franklin:wght@400;500;600&display=swap" rel="stylesheet">
@@ -285,6 +286,14 @@ a { color: inherit; text-decoration: none; }
 <div class="content">
   <!-- NEWS -->
   <div class="tab-panel active" id="panel-news">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div id="newsStatus" style="font-size:11px;color:var(--text-faint)"></div>
+      <button id="refreshBtn" onclick="refreshNews()" style="
+        background:#0e0e22;border:1px solid var(--card-border);color:var(--text-dim);
+        padding:5px 12px;border-radius:10px;font-size:11px;cursor:pointer;
+        font-family:var(--font-body);display:flex;align-items:center;gap:5px;
+      ">🔄 Ververs</button>
+    </div>
     <div class="filters" id="newsFilters"></div>
     <div id="newsList"></div>
   </div>
@@ -320,7 +329,7 @@ a { color: inherit; text-decoration: none; }
 
 <div class="install-hint" id="installHint">
   <button class="close-hint" onclick="document.getElementById('installHint').classList.remove('show')">&times;</button>
-  📱 Voeg toe aan je beginscherm via <strong>Delen → Zet op beginscherm</strong> voor de volledige app-ervaring!
+  📱 <strong>Installeer als app:</strong> Tik op Delen <span style="font-size:15px">⎋</span> → <strong>Zet op beginscherm</strong> voor offline toegang en snellere laadtijden!
 </div>
 
 <script>
@@ -546,7 +555,30 @@ renderNews(); // show loading state initially
 // Fetch feeds then re-render
 fetchAllFeeds().then(() => {
   renderNews();
+  updateNewsStatus();
 });
+
+function updateNewsStatus() {
+  const el = document.getElementById('newsStatus');
+  if (el && !newsLoading && NEWS.length > 0) {
+    const now = new Date();
+    el.textContent = `Bijgewerkt: ${now.toLocaleTimeString('nl-NL', {hour:'2-digit',minute:'2-digit'})} · ${NEWS.length} artikelen`;
+  }
+}
+
+async function refreshNews() {
+  const btn = document.getElementById('refreshBtn');
+  btn.textContent = '⏳ Laden...';
+  btn.disabled = true;
+  newsLoading = true;
+  NEWS = [];
+  renderNews();
+  await fetchAllFeeds();
+  renderNews();
+  updateNewsStatus();
+  btn.innerHTML = '🔄 Ververs';
+  btn.disabled = false;
+}
 
 document.getElementById('newsFilters').addEventListener('click', e=>{
   const btn = e.target.closest('.filter-btn');
@@ -664,9 +696,21 @@ document.getElementById('darkSkyList').innerHTML = DARK_SPOTS.map(s=>
   </div>`
 ).join('');
 
+// ===== SERVICE WORKER REGISTRATION =====
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js')
+    .then(reg => {
+      console.log('✦ Service Worker registered:', reg.scope);
+      // Check for updates every 30 min
+      setInterval(() => reg.update(), 30 * 60 * 1000);
+    })
+    .catch(err => console.warn('SW registration failed:', err));
+}
+
 // ===== PWA INSTALL HINT =====
-if(window.navigator.standalone === false || window.matchMedia('(display-mode: browser)').matches){
-  setTimeout(()=> document.getElementById('installHint').classList.add('show'), 3000);
+const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+if (!isStandalone) {
+  setTimeout(() => document.getElementById('installHint').classList.add('show'), 3000);
 }
 </script>
 </body>
