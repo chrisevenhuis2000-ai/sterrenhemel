@@ -263,6 +263,8 @@ a { color: inherit; text-decoration: none; }
   position: absolute; top: 8px; right: 12px;
   background: none; border: none; color: #556; font-size: 18px; cursor: pointer;
 }
+input:focus { outline: none; border-color: var(--accent-blue) !important; }
+input::placeholder { color: var(--text-faint); }
 </style>
 </head>
 <body>
@@ -274,7 +276,9 @@ a { color: inherit; text-decoration: none; }
     <span class="star-icon">✦</span>
     <h1>Sterrenhemel</h1>
   </div>
-  <div class="subtitle" id="dateSubtitle"></div>
+  <div class="subtitle" id="dateSubtitle" style="cursor:pointer" onclick="openLocationModal()">
+    <span id="locationText">Locatie laden...</span> <span style="font-size:10px;opacity:0.5">✏️</span>
+  </div>
   <div class="tabs" id="tabs">
     <button class="tab-btn active" data-tab="news"><span class="tab-icon">📰</span> Nieuws</button>
     <button class="tab-btn" data-tab="tonight"><span class="tab-icon">🔭</span> Vanavond</button>
@@ -331,8 +335,52 @@ a { color: inherit; text-decoration: none; }
 
   <!-- DARK SKY -->
   <div class="tab-panel" id="panel-darksky">
-    <p class="card-body" style="margin-bottom:16px">De beste donkere locaties bij Marum voor sterrenkijken en astrofotografie. Bortle-schaal: 1 (donkerst) – 9 (stadscentrum).</p>
+    <p class="card-body" style="margin-bottom:16px">De beste donkere locaties bij jou in de buurt voor sterrenkijken en astrofotografie. Bortle-schaal: 1 (donkerst) – 9 (stadscentrum). Afstanden berekend vanaf je ingestelde locatie.</p>
     <div id="darkSkyList"></div>
+  </div>
+</div>
+
+<!-- LOCATION MODAL -->
+<div id="locationModal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);animation:fadeUp 0.25s ease">
+  <div style="position:absolute;bottom:0;left:0;right:0;background:#0c0c1e;border-radius:20px 20px 0 0;border:1px solid #1a1a3a;border-bottom:none;padding:24px 20px 40px;max-height:80vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <h2 style="font-family:var(--font-display);font-size:18px;font-weight:600;color:#d0d8f0">📍 Locatie instellen</h2>
+      <button onclick="closeLocationModal()" style="background:none;border:none;color:#556;font-size:22px;cursor:pointer">&times;</button>
+    </div>
+
+    <button onclick="detectGPS()" id="gpsBtn" style="
+      width:100%;padding:14px;border-radius:12px;border:1px solid #2a2a50;
+      background:linear-gradient(135deg,#12123a,#0e0e2a);color:#a0b0e0;
+      font-size:14px;font-weight:600;font-family:var(--font-body);cursor:pointer;
+      display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:16px;
+    ">📡 Gebruik mijn GPS-locatie</button>
+
+    <div style="text-align:center;font-size:12px;color:var(--text-faint);margin-bottom:14px">— of kies een locatie —</div>
+
+    <div id="presetLocations" style="display:flex;flex-direction:column;gap:6px"></div>
+
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid #1a1a2a">
+      <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px">Of voer coördinaten in:</div>
+      <div style="display:flex;gap:8px">
+        <input id="manualLat" type="number" step="0.01" placeholder="Latitude" style="
+          flex:1;padding:10px;border-radius:10px;border:1px solid #1a1a3a;
+          background:#08081a;color:#c8d0e4;font-size:13px;font-family:var(--font-body);
+        ">
+        <input id="manualLon" type="number" step="0.01" placeholder="Longitude" style="
+          flex:1;padding:10px;border-radius:10px;border:1px solid #1a1a3a;
+          background:#08081a;color:#c8d0e4;font-size:13px;font-family:var(--font-body);
+        ">
+      </div>
+      <input id="manualName" type="text" placeholder="Plaatsnaam (optioneel)" style="
+        width:100%;padding:10px;border-radius:10px;border:1px solid #1a1a3a;margin-top:8px;
+        background:#08081a;color:#c8d0e4;font-size:13px;font-family:var(--font-body);
+      ">
+      <button onclick="saveManualLocation()" style="
+        width:100%;padding:12px;border-radius:10px;border:1px solid #2a2a50;margin-top:8px;
+        background:#16163a;color:#a0b0e0;font-size:13px;font-weight:600;
+        font-family:var(--font-body);cursor:pointer;
+      ">Opslaan</button>
+    </div>
   </div>
 </div>
 
@@ -498,11 +546,39 @@ const PLANETS = [
 ];
 
 const DARK_SPOTS = [
-  { name:"Lauwersmeer", distance:"~35 km", bortle:"3–4", desc:"Nationaal Park, officieel Dark Sky Park. Beste locatie in Noord-Nederland.", tip:"Ga naar de zuidkant van het meer voor minste lichtvervuiling richting noorden." },
-  { name:"Terschelling", distance:"~90 km + veerboot", bortle:"2–3", desc:"Het donkerste stuk Nederland. Spectaculair voor Melkweg-fotografie.", tip:"Boschplaat aan de oostkant is het donkerst. Neem warme kleding mee!" },
-  { name:"Fochteloërveen", distance:"~25 km", bortle:"4", desc:"Hoogveengebied met weinig lichtvervuiling. Dichtbij en toegankelijk.", tip:"Parkeer bij de ingang en loop het pad op. Vlak terrein = groot hemelbereik." },
-  { name:"Bargerveen", distance:"~100 km", bortle:"3–4", desc:"Groot natuurgebied in Zuidoost-Drenthe, ver van grote steden.", tip:"Combineer met een bezoek aan het veenmuseum overdag." }
+  { name:"Lauwersmeer", lat:53.36, lon:6.20, bortle:"3–4", desc:"Nationaal Park, officieel Dark Sky Park. Beste locatie in Noord-Nederland.", tip:"Ga naar de zuidkant van het meer voor minste lichtvervuiling richting noorden." },
+  { name:"Terschelling", lat:53.43, lon:5.35, bortle:"2–3", desc:"Het donkerste stuk Nederland. Spectaculair voor Melkweg-fotografie.", tip:"Boschplaat aan de oostkant is het donkerst. Neem warme kleding mee!" },
+  { name:"Fochteloërveen", lat:52.96, lon:6.38, bortle:"4", desc:"Hoogveengebied met weinig lichtvervuiling. Dichtbij en toegankelijk.", tip:"Parkeer bij de ingang en loop het pad op. Vlak terrein = groot hemelbereik." },
+  { name:"Bargerveen", lat:52.68, lon:7.03, bortle:"3–4", desc:"Groot natuurgebied in Zuidoost-Drenthe, ver van grote steden.", tip:"Combineer met een bezoek aan het veenmuseum overdag." },
+  { name:"Bourtangermoor", lat:53.01, lon:7.20, bortle:"3–4", desc:"Grensgebied Drenthe/Duitsland, zeer weinig lichtvervuiling.", tip:"Net over de Duitse grens, donkerder dan de Nederlandse kant." },
+  { name:"Spiekeroog (DE)", lat:53.77, lon:7.69, bortle:"2–3", desc:"IDA-gecertificeerd Dark Sky eiland in Duitsland. Extreem donker.", tip:"Veerboot vanuit Neuharlingersiel. Perfecte Melkweg-conditie!" },
 ];
+
+function calcDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2-lat1) * Math.PI/180;
+  const dLon = (lon2-lon1) * Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
+  return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+}
+
+function renderDarkSky() {
+  const sorted = DARK_SPOTS
+    .map(s => ({ ...s, dist: calcDistance(userLocation.lat, userLocation.lon, s.lat, s.lon) }))
+    .sort((a,b) => a.dist - b.dist);
+
+  document.getElementById('darkSkyList').innerHTML = sorted.map(s =>
+    `<div class="card" style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:7px">
+        <div class="card-title">🌌 ${s.name}</div>
+        <span class="bortle-badge">Bortle ${s.bortle}</span>
+      </div>
+      <div style="font-size:12px;color:var(--text-faint);margin-bottom:6px">📍 ~${s.dist} km vanaf ${userLocation.name.split(',')[0]}</div>
+      <div class="card-body">${s.desc}</div>
+      <div class="spot-tip">💡 Tip: ${s.tip}</div>
+    </div>`
+  ).join('');
+}
 
 const SKY_OBJECTS = [
   { obj:"Jupiter", where:"Hoog in het zuiden, in Gemini", mag:"–2.3", icon:"♃", tip:"Perfect voor je telescoop! Probeer de Galileïsche manen." },
@@ -556,10 +632,136 @@ const TAG_COLORS = {
   requestAnimationFrame(draw);
 })();
 
+// ===== LOCATION SYSTEM =====
+const DEFAULT_LOCATION = { lat: 53.1439, lon: 6.2642, name: "Marum, Groningen" };
+
+const PRESET_LOCATIONS = [
+  { lat: 53.1439, lon: 6.2642, name: "Marum, Groningen" },
+  { lat: 53.2194, lon: 6.5665, name: "Groningen" },
+  { lat: 52.3676, lon: 4.9041, name: "Amsterdam" },
+  { lat: 52.0907, lon: 5.1214, name: "Utrecht" },
+  { lat: 51.4416, lon: 5.4697, name: "Eindhoven" },
+  { lat: 52.2215, lon: 6.8937, name: "Enschede" },
+  { lat: 51.9225, lon: 4.4792, name: "Rotterdam" },
+  { lat: 53.2012, lon: 5.7999, name: "Leeuwarden" },
+  { lat: 52.5200, lon: 13.4050, name: "Berlijn, DE" },
+  { lat: 51.5074, lon: -0.1278, name: "Londen, UK" },
+  { lat: 48.8566, lon: 2.3522, name: "Parijs, FR" },
+];
+
+let userLocation = { ...DEFAULT_LOCATION };
+
+// Load saved location
+function loadLocation() {
+  try {
+    const saved = window.localStorage?.getItem('sterrenhemel_location');
+    if (saved) {
+      userLocation = JSON.parse(saved);
+    }
+  } catch(e) { /* localStorage not available */ }
+}
+
+function saveLocation(loc) {
+  userLocation = loc;
+  try {
+    window.localStorage?.setItem('sterrenhemel_location', JSON.stringify(loc));
+  } catch(e) {}
+  updateLocationUI();
+  // Re-fetch weather with new location
+  fetchWeather();
+  renderDarkSky();
+}
+
+function updateLocationUI() {
+  const dateStr = now.toLocaleDateString('nl-NL', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  document.getElementById('locationText').textContent = `${userLocation.name} — ${dateStr}`;
+}
+
+function openLocationModal() {
+  document.getElementById('locationModal').style.display = 'block';
+  // Render presets
+  document.getElementById('presetLocations').innerHTML = PRESET_LOCATIONS.map(p => {
+    const isActive = Math.abs(p.lat - userLocation.lat) < 0.01 && Math.abs(p.lon - userLocation.lon) < 0.01;
+    return `<button onclick="selectPreset(${p.lat},${p.lon},'${p.name}')" style="
+      text-align:left;padding:12px 14px;border-radius:10px;cursor:pointer;
+      border:1px solid ${isActive ? 'var(--accent-blue)' : '#1a1a2a'};
+      background:${isActive ? '#14143a' : '#08081a'};
+      color:${isActive ? '#c8d8f8' : 'var(--text-dim)'};
+      font-size:13px;font-family:var(--font-body);
+      display:flex;justify-content:space-between;align-items:center;
+    ">${p.name} ${isActive ? '<span style="color:var(--accent-blue)">✓</span>' : ''}</button>`;
+  }).join('');
+}
+
+function closeLocationModal() {
+  document.getElementById('locationModal').style.display = 'none';
+}
+
+function selectPreset(lat, lon, name) {
+  saveLocation({ lat, lon, name });
+  closeLocationModal();
+}
+
+function detectGPS() {
+  const btn = document.getElementById('gpsBtn');
+  btn.innerHTML = '⏳ Locatie detecteren...';
+  btn.disabled = true;
+
+  if (!navigator.geolocation) {
+    btn.innerHTML = '❌ GPS niet beschikbaar';
+    setTimeout(() => { btn.innerHTML = '📡 Gebruik mijn GPS-locatie'; btn.disabled = false; }, 2000);
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      const lat = Math.round(pos.coords.latitude * 10000) / 10000;
+      const lon = Math.round(pos.coords.longitude * 10000) / 10000;
+
+      // Reverse geocode via Open-Meteo's geocoding
+      let name = `${lat}°N, ${lon}°E`;
+      try {
+        const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=&latitude=${lat}&longitude=${lon}&count=1&language=nl`);
+        // Fallback: use nominatim
+        const res2 = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=10&accept-language=nl`);
+        const data2 = await res2.json();
+        if (data2.address) {
+          name = data2.address.city || data2.address.town || data2.address.village || data2.address.municipality || name;
+          if (data2.address.state) name += ', ' + data2.address.state;
+        }
+      } catch(e) {}
+
+      saveLocation({ lat, lon, name });
+      btn.innerHTML = `✅ ${name}`;
+      setTimeout(() => {
+        btn.innerHTML = '📡 Gebruik mijn GPS-locatie';
+        btn.disabled = false;
+        closeLocationModal();
+      }, 1200);
+    },
+    (err) => {
+      btn.innerHTML = '❌ Geen toegang tot locatie';
+      setTimeout(() => { btn.innerHTML = '📡 Gebruik mijn GPS-locatie'; btn.disabled = false; }, 2000);
+    },
+    { enableHighAccuracy: false, timeout: 10000 }
+  );
+}
+
+function saveManualLocation() {
+  const lat = parseFloat(document.getElementById('manualLat').value);
+  const lon = parseFloat(document.getElementById('manualLon').value);
+  const name = document.getElementById('manualName').value || `${lat}°N, ${lon}°E`;
+  if (isNaN(lat) || isNaN(lon)) { alert('Voer geldige coördinaten in.'); return; }
+  saveLocation({ lat, lon, name });
+  closeLocationModal();
+}
+
+// Initialize location
+loadLocation();
+
 // ===== DATE =====
 const now = new Date();
-document.getElementById('dateSubtitle').textContent =
-  'Marum, Groningen — ' + now.toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+updateLocationUI();
 
 // ===== TABS =====
 document.getElementById('tabs').addEventListener('click', e=>{
@@ -653,9 +855,10 @@ document.getElementById('newsFilters').addEventListener('click', e=>{
 // ===== WEATHER =====
 async function fetchWeather(){
   try {
+    document.getElementById('weatherWidget').innerHTML = '<div class="loading"><div class="spinner">🔭</div><div>Weerdata ophalen voor ' + userLocation.name + '...</div></div>';
     const h = now.getHours();
     const target = h<16?21:(h<23?h+1:23);
-    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=53.1439&longitude=6.2642&hourly=cloud_cover,temperature_2m,relative_humidity_2m,wind_speed_10m,visibility&timezone=Europe/Amsterdam&forecast_days=1`);
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${userLocation.lat}&longitude=${userLocation.lon}&hourly=cloud_cover,temperature_2m,relative_humidity_2m,wind_speed_10m,visibility&timezone=auto&forecast_days=1`);
     const data = await res.json();
     const hr = data.hourly;
     const cc = Math.round(hr.cloud_cover[target]);
@@ -819,7 +1022,7 @@ function scheduleNotifications() {
     // Daily 16:00 stargazing check
     if (hour === 16) {
       // Trigger weather check notification
-      fetch(`https://api.open-meteo.com/v1/forecast?latitude=53.1439&longitude=6.2642&hourly=cloud_cover&timezone=Europe/Amsterdam&forecast_days=1`)
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${userLocation.lat}&longitude=${userLocation.lon}&hourly=cloud_cover&timezone=auto&forecast_days=1`)
         .then(r => r.json())
         .then(data => {
           const cc = data.hourly.cloud_cover[21]; // 21:00
@@ -880,17 +1083,7 @@ if (notifPermission === 'granted') {
 }
 
 // ===== DARK SKY =====
-document.getElementById('darkSkyList').innerHTML = DARK_SPOTS.map(s=>
-  `<div class="card" style="margin-bottom:12px">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:7px">
-      <div class="card-title">🌌 ${s.name}</div>
-      <span class="bortle-badge">Bortle ${s.bortle}</span>
-    </div>
-    <div style="font-size:12px;color:var(--text-faint);margin-bottom:6px">📍 ${s.distance} vanaf Marum</div>
-    <div class="card-body">${s.desc}</div>
-    <div class="spot-tip">💡 Tip: ${s.tip}</div>
-  </div>`
-).join('');
+renderDarkSky();
 
 // ===== SERVICE WORKER REGISTRATION =====
 if ('serviceWorker' in navigator) {
