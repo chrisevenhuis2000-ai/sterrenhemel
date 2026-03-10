@@ -314,6 +314,15 @@ a { color: inherit; text-decoration: none; }
 
   <!-- CALENDAR -->
   <div class="tab-panel" id="panel-calendar">
+    <!-- Notification banner -->
+    <div id="notifBanner" style="display:none;margin-bottom:14px;padding:12px 16px;border-radius:12px;background:#12122e;border:1px solid #2a2a50;font-size:12px;color:#a0b0d8;cursor:pointer" onclick="requestNotifPermission()">
+      🔔 <strong>Meldingen inschakelen?</strong> Ontvang een herinnering bij bijzondere astronomie-events.
+    </div>
+
+    <!-- Deep Sky Seasons -->
+    <div class="section-title">🌌 Deep Sky Seizoenen 2026</div>
+    <div id="seasonsList" style="margin-bottom:24px"></div>
+
     <div class="section-title">☄️ Meteorenregens 2026</div>
     <div id="meteorList" style="margin-bottom:24px"></div>
     <div class="section-title">🪐 Planeet-events 2026</div>
@@ -411,6 +420,60 @@ async function fetchAllFeeds() {
   NEWS = allItems.slice(0, 25);
   newsLoading = false;
 }
+
+// ===== DEEP SKY SEASONS =====
+const SEASONS = [
+  {
+    name: "Melkweg Seizoen",
+    icon: "🌌",
+    months: [3,4,5,6,7,8,9,10],
+    peakMonths: [5,6,7,8],
+    color: "#a080e0",
+    desc: "De Galactische Kern is zichtbaar van maart t/m oktober. Piek in mei–augustus wanneer de kern hoog aan de hemel staat.",
+    tip: "Beste na middernacht bij nieuwe maan. Ga naar Lauwersmeer of Terschelling voor de donkerste hemel. Gebruik een breedhoeklens (14-24mm) bij f/2.8.",
+    targets: "Galactische kern, Sagittarius sterrebwolk, Rho Ophiuchi complex"
+  },
+  {
+    name: "Nevelseizoen — Winter",
+    icon: "✨",
+    months: [11,12,1,2,3],
+    peakMonths: [12,1,2],
+    color: "#e07068",
+    desc: "Winter is hét seizoen voor heldere nevels. Orion staat centraal met de beroemde Orionnevel, Paardekopnevel en Rosette-nevel.",
+    tip: "Orionnevel (M42) is prachtig door je Bresser Pollux! Kijk richting het zuiden na 21:00. De Krab-nevel (M1) in Stier is ook een mooi doelwit.",
+    targets: "Orionnevel (M42), Paardekopnevel (B33), Rosette-nevel, Krab-nevel (M1), Pleiaden (M45)"
+  },
+  {
+    name: "Nevelseizoen — Zomer",
+    icon: "🔴",
+    months: [5,6,7,8,9],
+    peakMonths: [6,7,8],
+    color: "#e0a040",
+    desc: "Zomer brengt prachtige emissienevels in Zwaan en Schutter. De Sluiernevel, Noord-Amerika nevel, en Lagune-nevel zijn topkandidaten.",
+    tip: "Ring-nevel (M57) in Lier is compact maar helder — mooi door telescoop! De Halter-nevel (M27) in Vosje is de helderste planetaire nevel.",
+    targets: "Sluiernevel, Noord-Amerika nevel (NGC 7000), Lagune-nevel (M8), Ring-nevel (M57), Halter-nevel (M27), Omega-nevel (M17)"
+  },
+  {
+    name: "Sterrenstelsel Seizoen",
+    icon: "🔭",
+    months: [3,4,5],
+    peakMonths: [4,5],
+    color: "#5090e0",
+    desc: "Lente = Galaxy Season! De Virgo-cluster en sterrenstelsels in Leeuw en Haar van Berenice domineren de hemel.",
+    tip: "Andromedanevel (M31) is nog zichtbaar in het westen in maart. Draaikolknevel (M51) en Sombrero-melkweg (M104) zijn fantastisch met telescoop.",
+    targets: "Andromedanevel (M31), Draaikolknevel (M51), Bode's sterrenstelsels (M81/M82), Sombrero (M104), Windmolen (M101)"
+  },
+  {
+    name: "Bolvormige Sterrenhopen",
+    icon: "⭐",
+    months: [5,6,7,8,9],
+    peakMonths: [6,7],
+    color: "#50d088",
+    desc: "Zomer is ideaal voor bolvormige sterrenhopen. De Grote Herculeshoop (M13) is de helderste aan de noordelijke hemel.",
+    tip: "M13 is een must! Zichtbaar met een verrekijker als een wazig vlekje, spectaculair door telescoop.",
+    targets: "Grote Herculeshoop (M13), M5 in Slang, M22 in Schutter, M92 in Hercules"
+  }
+];
 
 const METEORS = [
   { name:"Quadrantiden", peak:"3–4 jan", zhr:110, moon:"100%", rating:1, month:1, note:"Volle maan verstoorde zicht volledig" },
@@ -682,6 +745,139 @@ document.getElementById('planetList').innerHTML = PLANETS.map(p=>
     <div><div class="p-event">${p.event}</div><div class="p-date">${p.date}</div></div>
   </div>`
 ).join('');
+
+// ===== DEEP SKY SEASONS =====
+document.getElementById('seasonsList').innerHTML = SEASONS.map((s, i) => {
+  const isActive = s.months.includes(cm);
+  const isPeak = s.peakMonths.includes(cm);
+  const monthNames = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+  const bar = Array.from({length:12}, (_,m) => {
+    const mn = m + 1;
+    const active = s.months.includes(mn);
+    const peak = s.peakMonths.includes(mn);
+    const current = mn === cm;
+    let bg = '#0e0e1a';
+    if (peak) bg = s.color + '60';
+    else if (active) bg = s.color + '25';
+    return `<div style="flex:1;text-align:center">
+      <div style="height:6px;border-radius:3px;background:${bg};margin-bottom:3px;${current?`box-shadow:0 0 6px ${s.color};border:1px solid ${s.color}`:''}""></div>
+      <div style="font-size:8px;color:${current?s.color:'#333850'};font-weight:${current?'700':'400'}">${monthNames[m]}</div>
+    </div>`;
+  }).join('');
+
+  return `<div class="card" style="margin-bottom:10px;${isActive?`border-color:${s.color}30`:''};${isPeak?`background:linear-gradient(135deg, ${s.color}08, transparent)`:''}">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:20px">${s.icon}</span>
+        <span style="font-family:var(--font-display);font-size:14px;font-weight:600;color:${isActive?'#d0d8f0':'var(--text-faint)'}">${s.name}</span>
+      </div>
+      ${isPeak ? `<span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:8px;background:${s.color}20;color:${s.color}">NU PIEKPERIODE</span>` :
+        isActive ? `<span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:8px;background:${s.color}15;color:${s.color}90">ACTIEF</span>` : ''}
+    </div>
+    <div style="display:flex;gap:2px;margin-bottom:10px">${bar}</div>
+    <div class="card-body" style="margin-bottom:6px">${s.desc}</div>
+    <div style="font-size:12px;color:#4a8878;line-height:1.5;margin-bottom:6px">💡 ${s.tip}</div>
+    <div style="font-size:11px;color:var(--text-faint)">🎯 Doelwitten: ${s.targets}</div>
+  </div>`;
+}).join('');
+
+// ===== NOTIFICATIONS =====
+let notifPermission = Notification.permission || 'default';
+
+// Show notification banner if not yet granted
+if ('Notification' in window && notifPermission === 'default') {
+  document.getElementById('notifBanner').style.display = 'block';
+}
+
+async function requestNotifPermission() {
+  if (!('Notification' in window)) {
+    alert('Je browser ondersteunt geen meldingen.');
+    return;
+  }
+  const perm = await Notification.requestPermission();
+  notifPermission = perm;
+  document.getElementById('notifBanner').style.display = 'none';
+  if (perm === 'granted') {
+    new Notification('✦ Sterrenhemel', {
+      body: 'Meldingen ingeschakeld! Je krijgt herinneringen bij bijzondere events.',
+      icon: './icon-192.png'
+    });
+    scheduleNotifications();
+  }
+}
+
+function scheduleNotifications() {
+  if (notifPermission !== 'granted') return;
+
+  // Check every hour if there's an upcoming event to notify about
+  function checkEvents() {
+    const today = new Date();
+    const month = today.getMonth() + 1;
+    const day = today.getDate();
+    const hour = today.getHours();
+
+    // Daily 16:00 stargazing check
+    if (hour === 16) {
+      // Trigger weather check notification
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=53.1439&longitude=6.2642&hourly=cloud_cover&timezone=Europe/Amsterdam&forecast_days=1`)
+        .then(r => r.json())
+        .then(data => {
+          const cc = data.hourly.cloud_cover[21]; // 21:00
+          if (cc < 30) {
+            new Notification('🌟 Sterrenhemel — Ga naar buiten!', {
+              body: `Vanavond slechts ${cc}% bewolking. Perfecte avond voor sterrenkijken!`,
+              icon: './icon-192.png'
+            });
+          } else if (cc < 50) {
+            new Notification('🌤️ Sterrenhemel — Matige condities', {
+              body: `Bewolking vanavond: ${cc}%. De helderste sterren en planeten zijn zichtbaar.`,
+              icon: './icon-192.png'
+            });
+          }
+        }).catch(() => {});
+    }
+
+    // Meteor shower reminders (1 day before peak)
+    const meteorAlerts = [
+      { month:4, day:20, name:"Lyriden" },
+      { month:5, day:4, name:"Eta Aquariden" },
+      { month:8, day:11, name:"Perseïden" },
+      { month:10, day:7, name:"Draconiden" },
+      { month:10, day:20, name:"Orioniden" },
+      { month:11, day:15, name:"Leoniden" },
+      { month:12, day:12, name:"Geminiden" },
+    ];
+    const alert = meteorAlerts.find(a => a.month === month && a.day === day);
+    if (alert && hour === 12) {
+      new Notification(`☄️ ${alert.name} morgen!`, {
+        body: `De ${alert.name} meteorenregen bereikt morgen zijn piek. Kijk na middernacht omhoog!`,
+        icon: './icon-192.png'
+      });
+    }
+
+    // Season start reminders
+    const seasonAlerts = [
+      { month:3, day:1, title:"🌌 Melkweg-seizoen begint!", body:"De Galactische Kern wordt weer zichtbaar. Tijd om naar Lauwersmeer te gaan!" },
+      { month:5, day:1, title:"🌌 Melkweg piekperiode!", body:"De beste maanden voor Melkweg-fotografie zijn aangebroken (mei–aug)." },
+      { month:4, day:1, title:"🔭 Galaxy Season!", body:"Lente = sterrenstelsel-seizoen. Tijd voor M81, M51 en de Virgo-cluster." },
+      { month:6, day:1, title:"✨ Zomer-nevelseizoen!", body:"Sluiernevel, Noord-Amerika nevel en meer — de zomernevels zijn er weer." },
+      { month:11, day:1, title:"✨ Winter-nevelseizoen!", body:"Orionnevel, Rosette-nevel en Paardekopnevel — winternevels zijn terug!" },
+    ];
+    const sAlert = seasonAlerts.find(a => a.month === month && a.day === day);
+    if (sAlert && hour === 10) {
+      new Notification(sAlert.title, { body: sAlert.body, icon: './icon-192.png' });
+    }
+  }
+
+  // Run check now and every hour
+  checkEvents();
+  setInterval(checkEvents, 60 * 60 * 1000);
+}
+
+// Auto-start if already permitted
+if (notifPermission === 'granted') {
+  scheduleNotifications();
+}
 
 // ===== DARK SKY =====
 document.getElementById('darkSkyList').innerHTML = DARK_SPOTS.map(s=>
