@@ -276,7 +276,7 @@ input::placeholder { color: var(--text-faint); }
     <span class="star-icon">✦</span>
     <h1>Sterrenhemel</h1>
   </div>
-  <div class="subtitle" id="dateSubtitle" style="cursor:pointer" onclick="openLocationModal()">
+  <div class="subtitle" id="dateSubtitle" style="cursor:pointer" onclick="switchToTab('settings')">
     <span id="locationText">Locatie laden...</span> <span style="font-size:10px;opacity:0.5">✏️</span>
   </div>
   <div class="tabs" id="tabs">
@@ -284,6 +284,7 @@ input::placeholder { color: var(--text-faint); }
     <button class="tab-btn" data-tab="tonight"><span class="tab-icon">🔭</span> Vanavond</button>
     <button class="tab-btn" data-tab="calendar"><span class="tab-icon">📅</span> Kalender</button>
     <button class="tab-btn" data-tab="darksky"><span class="tab-icon">🌌</span> Dark Sky</button>
+    <button class="tab-btn" data-tab="settings"><span class="tab-icon">⚙️</span></button>
   </div>
 </div>
 
@@ -318,11 +319,6 @@ input::placeholder { color: var(--text-faint); }
 
   <!-- CALENDAR -->
   <div class="tab-panel" id="panel-calendar">
-    <!-- Notification banner -->
-    <div id="notifBanner" style="display:none;margin-bottom:14px;padding:12px 16px;border-radius:12px;background:#12122e;border:1px solid #2a2a50;font-size:12px;color:#a0b0d8;cursor:pointer" onclick="requestNotifPermission()">
-      🔔 <strong>Meldingen inschakelen?</strong> Ontvang een herinnering bij bijzondere astronomie-events.
-    </div>
-
     <!-- Deep Sky Seasons -->
     <div class="section-title">🌌 Deep Sky Seizoenen 2026</div>
     <div id="seasonsList" style="margin-bottom:24px"></div>
@@ -338,48 +334,105 @@ input::placeholder { color: var(--text-faint); }
     <p class="card-body" style="margin-bottom:16px">De beste donkere locaties bij jou in de buurt voor sterrenkijken en astrofotografie. Bortle-schaal: 1 (donkerst) – 9 (stadscentrum). Afstanden berekend vanaf je ingestelde locatie.</p>
     <div id="darkSkyList"></div>
   </div>
-</div>
 
-<!-- LOCATION MODAL -->
-<div id="locationModal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);animation:fadeUp 0.25s ease">
-  <div style="position:absolute;bottom:0;left:0;right:0;background:#0c0c1e;border-radius:20px 20px 0 0;border:1px solid #1a1a3a;border-bottom:none;padding:24px 20px 40px;max-height:80vh;overflow-y:auto">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-      <h2 style="font-family:var(--font-display);font-size:18px;font-weight:600;color:#d0d8f0">📍 Locatie instellen</h2>
-      <button onclick="closeLocationModal()" style="background:none;border:none;color:#556;font-size:22px;cursor:pointer">&times;</button>
+  <!-- SETTINGS -->
+  <div class="tab-panel" id="panel-settings">
+    <div class="section-title" style="margin-bottom:14px">⚙️ Instellingen</div>
+
+    <!-- Location -->
+    <div class="card" style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-family:var(--font-display);font-size:14px;font-weight:600;color:#d0d8f0">📍 Locatie</div>
+        <span id="settingsLocationName" style="font-size:12px;color:var(--accent-blue)"></span>
+      </div>
+      <p class="card-body" style="margin-bottom:12px">Je locatie bepaalt het weer, de stargazing score en de afstanden naar dark sky locaties.</p>
+      <button onclick="detectGPS()" id="gpsBtn" style="
+        width:100%;padding:12px;border-radius:10px;border:1px solid #2a2a50;
+        background:linear-gradient(135deg,#12123a,#0e0e2a);color:#a0b0e0;
+        font-size:13px;font-weight:600;font-family:var(--font-body);cursor:pointer;
+        display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px;
+      ">📡 Gebruik mijn GPS-locatie</button>
+      <div style="font-size:11px;color:var(--text-faint);margin-bottom:8px;text-align:center">— of kies een bekende locatie —</div>
+      <div id="presetLocations" style="display:flex;flex-direction:column;gap:5px;margin-bottom:12px"></div>
+      <div style="border-top:1px solid #1a1a2a;padding-top:12px">
+        <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px">Of voer coördinaten in:</div>
+        <div style="display:flex;gap:8px">
+          <input id="manualLat" type="number" step="0.01" placeholder="Latitude" style="
+            flex:1;padding:9px;border-radius:8px;border:1px solid #1a1a3a;
+            background:#08081a;color:#c8d0e4;font-size:12px;font-family:var(--font-body);
+          ">
+          <input id="manualLon" type="number" step="0.01" placeholder="Longitude" style="
+            flex:1;padding:9px;border-radius:8px;border:1px solid #1a1a3a;
+            background:#08081a;color:#c8d0e4;font-size:12px;font-family:var(--font-body);
+          ">
+        </div>
+        <input id="manualName" type="text" placeholder="Plaatsnaam (optioneel)" style="
+          width:100%;padding:9px;border-radius:8px;border:1px solid #1a1a3a;margin-top:6px;
+          background:#08081a;color:#c8d0e4;font-size:12px;font-family:var(--font-body);
+        ">
+        <button onclick="saveManualLocation()" style="
+          width:100%;padding:10px;border-radius:8px;border:1px solid #2a2a50;margin-top:8px;
+          background:#16163a;color:#a0b0e0;font-size:12px;font-weight:600;
+          font-family:var(--font-body);cursor:pointer;
+        ">Opslaan</button>
+      </div>
     </div>
 
-    <button onclick="detectGPS()" id="gpsBtn" style="
-      width:100%;padding:14px;border-radius:12px;border:1px solid #2a2a50;
-      background:linear-gradient(135deg,#12123a,#0e0e2a);color:#a0b0e0;
-      font-size:14px;font-weight:600;font-family:var(--font-body);cursor:pointer;
-      display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:16px;
-    ">📡 Gebruik mijn GPS-locatie</button>
-
-    <div style="text-align:center;font-size:12px;color:var(--text-faint);margin-bottom:14px">— of kies een locatie —</div>
-
-    <div id="presetLocations" style="display:flex;flex-direction:column;gap:6px"></div>
-
-    <div style="margin-top:16px;padding-top:14px;border-top:1px solid #1a1a2a">
-      <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px">Of voer coördinaten in:</div>
-      <div style="display:flex;gap:8px">
-        <input id="manualLat" type="number" step="0.01" placeholder="Latitude" style="
-          flex:1;padding:10px;border-radius:10px;border:1px solid #1a1a3a;
-          background:#08081a;color:#c8d0e4;font-size:13px;font-family:var(--font-body);
-        ">
-        <input id="manualLon" type="number" step="0.01" placeholder="Longitude" style="
-          flex:1;padding:10px;border-radius:10px;border:1px solid #1a1a3a;
-          background:#08081a;color:#c8d0e4;font-size:13px;font-family:var(--font-body);
-        ">
+    <!-- Notifications -->
+    <div class="card" style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-family:var(--font-display);font-size:14px;font-weight:600;color:#d0d8f0">🔔 Meldingen</div>
+        <span id="notifStatus" style="font-size:11px;padding:3px 10px;border-radius:8px"></span>
       </div>
-      <input id="manualName" type="text" placeholder="Plaatsnaam (optioneel)" style="
-        width:100%;padding:10px;border-radius:10px;border:1px solid #1a1a3a;margin-top:8px;
-        background:#08081a;color:#c8d0e4;font-size:13px;font-family:var(--font-body);
-      ">
-      <button onclick="saveManualLocation()" style="
-        width:100%;padding:12px;border-radius:10px;border:1px solid #2a2a50;margin-top:8px;
-        background:#16163a;color:#a0b0e0;font-size:13px;font-weight:600;
+      <p class="card-body" style="margin-bottom:12px">Dagelijkse stargazing-check om 16:00, meteorenregen-herinneringen en seizoen-meldingen.</p>
+      <button id="notifToggleBtn" onclick="toggleNotifications()" style="
+        width:100%;padding:12px;border-radius:10px;border:1px solid #2a2a50;
+        background:#12123a;color:#a0b0e0;font-size:13px;font-weight:600;
         font-family:var(--font-body);cursor:pointer;
-      ">Opslaan</button>
+      "></button>
+      <div id="notifNote" style="font-size:11px;color:var(--text-faint);margin-top:8px;line-height:1.5"></div>
+    </div>
+
+    <!-- Theme -->
+    <div class="card" style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-family:var(--font-display);font-size:14px;font-weight:600;color:#d0d8f0">🎨 Thema</div>
+          <div class="card-body" style="margin-top:4px">Wissel tussen donker en licht thema.</div>
+        </div>
+        <button id="themeToggle" onclick="toggleTheme()" style="
+          width:52px;height:28px;border-radius:14px;border:none;cursor:pointer;
+          background:#1a1a3a;position:relative;transition:background 0.3s;
+        ">
+          <div id="themeKnob" style="
+            width:22px;height:22px;border-radius:11px;
+            background:#d0d8f0;position:absolute;top:3px;left:3px;
+            transition:transform 0.3s;display:flex;align-items:center;justify-content:center;
+            font-size:12px;
+          ">🌙</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Language -->
+    <div class="card" style="margin-bottom:12px">
+      <div style="font-family:var(--font-display);font-size:14px;font-weight:600;color:#d0d8f0;margin-bottom:8px">🌐 Taal / Language</div>
+      <div style="display:flex;gap:8px">
+        <button onclick="setLanguage('nl')" id="langNL" class="filter-btn active" style="flex:1;text-align:center;padding:10px">🇳🇱 Nederlands</button>
+        <button onclick="setLanguage('en')" id="langEN" class="filter-btn" style="flex:1;text-align:center;padding:10px">🇬🇧 English</button>
+      </div>
+      <div id="langNote" style="font-size:11px;color:var(--text-faint);margin-top:8px"></div>
+    </div>
+
+    <!-- App info -->
+    <div class="card" style="margin-bottom:12px">
+      <div style="font-family:var(--font-display);font-size:14px;font-weight:600;color:#d0d8f0;margin-bottom:8px">ℹ️ Over Sterrenhemel</div>
+      <div class="card-body" style="line-height:1.6">
+        Versie 2.0 · Gebouwd met ✦ en Claude<br>
+        Weer: Open-Meteo API<br>
+        Nieuws: NASA, Universe Today, Space.com, Sky & Telescope, SpaceNews<br>
+        Geocoding: OpenStreetMap Nominatim
+      </div>
     </div>
   </div>
 </div>
@@ -663,11 +716,9 @@ function loadLocation() {
 
 function saveLocation(loc) {
   userLocation = loc;
-  try {
-    window.localStorage?.setItem('sterrenhemel_location', JSON.stringify(loc));
-  } catch(e) {}
+  try { window.localStorage?.setItem('sterrenhemel_location', JSON.stringify(loc)); } catch(e) {}
   updateLocationUI();
-  // Re-fetch weather with new location
+  renderPresetLocations();
   fetchWeather();
   renderDarkSky();
 }
@@ -675,32 +726,41 @@ function saveLocation(loc) {
 function updateLocationUI() {
   const dateStr = now.toLocaleDateString('nl-NL', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
   document.getElementById('locationText').textContent = `${userLocation.name} — ${dateStr}`;
+  const el = document.getElementById('settingsLocationName');
+  if (el) el.textContent = userLocation.name;
 }
 
-function openLocationModal() {
-  document.getElementById('locationModal').style.display = 'block';
-  // Render presets
-  document.getElementById('presetLocations').innerHTML = PRESET_LOCATIONS.map(p => {
+function switchToTab(tabId) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  const btn = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
+  if (btn) btn.classList.add('active');
+  const panel = document.getElementById('panel-' + tabId);
+  if (panel) panel.classList.add('active');
+}
+
+function renderPresetLocations() {
+  const el = document.getElementById('presetLocations');
+  if (!el) return;
+  el.innerHTML = PRESET_LOCATIONS.map(p => {
     const isActive = Math.abs(p.lat - userLocation.lat) < 0.01 && Math.abs(p.lon - userLocation.lon) < 0.01;
     return `<button onclick="selectPreset(${p.lat},${p.lon},'${p.name}')" style="
-      text-align:left;padding:12px 14px;border-radius:10px;cursor:pointer;
+      text-align:left;padding:10px 12px;border-radius:8px;cursor:pointer;
       border:1px solid ${isActive ? 'var(--accent-blue)' : '#1a1a2a'};
       background:${isActive ? '#14143a' : '#08081a'};
       color:${isActive ? '#c8d8f8' : 'var(--text-dim)'};
-      font-size:13px;font-family:var(--font-body);
+      font-size:12px;font-family:var(--font-body);
       display:flex;justify-content:space-between;align-items:center;
     ">${p.name} ${isActive ? '<span style="color:var(--accent-blue)">✓</span>' : ''}</button>`;
   }).join('');
 }
 
-function closeLocationModal() {
-  document.getElementById('locationModal').style.display = 'none';
-}
-
 function selectPreset(lat, lon, name) {
   saveLocation({ lat, lon, name });
-  closeLocationModal();
 }
+
+function openLocationModal() { switchToTab('settings'); }
+function closeLocationModal() {}
 
 function detectGPS() {
   const btn = document.getElementById('gpsBtn');
@@ -736,8 +796,7 @@ function detectGPS() {
       setTimeout(() => {
         btn.innerHTML = '📡 Gebruik mijn GPS-locatie';
         btn.disabled = false;
-        closeLocationModal();
-      }, 1200);
+      }, 1500);
     },
     (err) => {
       btn.innerHTML = '❌ Geen toegang tot locatie';
@@ -985,112 +1044,220 @@ document.getElementById('seasonsList').innerHTML = SEASONS.map((s, i) => {
 }).join('');
 
 // ===== NOTIFICATIONS =====
-let notifPermission = Notification.permission || 'default';
+const hasNotifAPI = ('Notification' in window);
+let notifPermission = hasNotifAPI ? Notification.permission : 'denied';
 
-// Show notification banner if not yet granted
-if ('Notification' in window && notifPermission === 'default') {
-  document.getElementById('notifBanner').style.display = 'block';
+function updateNotifUI() {
+  const statusEl = document.getElementById('notifStatus');
+  const btnEl = document.getElementById('notifToggleBtn');
+  const noteEl = document.getElementById('notifNote');
+  if (!statusEl) return;
+
+  const isStandaloneApp = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+
+  if (!hasNotifAPI) {
+    statusEl.textContent = 'Niet beschikbaar';
+    statusEl.style.cssText = 'font-size:11px;padding:3px 10px;border-radius:8px;background:#2a1515;color:var(--accent-red)';
+    btnEl.style.display = 'none';
+    noteEl.textContent = 'Je browser ondersteunt geen push-meldingen. Op iOS moet je de app eerst op je beginscherm zetten (Delen → Zet op beginscherm).';
+  } else if (notifPermission === 'granted') {
+    statusEl.textContent = 'Actief';
+    statusEl.style.cssText = 'font-size:11px;padding:3px 10px;border-radius:8px;background:#0e2e1e;color:var(--accent-green)';
+    btnEl.textContent = '🔕 Meldingen uitschakelen';
+    btnEl.style.borderColor = '#2a1515';
+    btnEl.style.color = '#a06060';
+    noteEl.textContent = 'Je ontvangt meldingen zolang de app open is of als PWA op je beginscherm staat.';
+  } else if (notifPermission === 'denied') {
+    statusEl.textContent = 'Geblokkeerd';
+    statusEl.style.cssText = 'font-size:11px;padding:3px 10px;border-radius:8px;background:#2a1515;color:var(--accent-red)';
+    btnEl.style.display = 'none';
+    noteEl.textContent = 'Meldingen zijn geblokkeerd in je browser-instellingen. Ga naar je browser/systeem-instellingen om dit te wijzigen.';
+  } else {
+    statusEl.textContent = 'Uit';
+    statusEl.style.cssText = 'font-size:11px;padding:3px 10px;border-radius:8px;background:#1a1a2a;color:var(--text-dim)';
+    btnEl.textContent = '🔔 Meldingen inschakelen';
+    btnEl.style.borderColor = '#2a2a50';
+    btnEl.style.color = '#a0b0e0';
+    noteEl.textContent = isStandaloneApp
+      ? 'Tik op de knop om meldingen in te schakelen.'
+      : 'Voor de beste ervaring: zet de app eerst op je beginscherm (Delen → Zet op beginscherm), open hem daar, en schakel dan meldingen in.';
+  }
 }
 
-async function requestNotifPermission() {
-  if (!('Notification' in window)) {
-    alert('Je browser ondersteunt geen meldingen.');
+async function toggleNotifications() {
+  if (notifPermission === 'granted') {
+    // Can't programmatically revoke, but we can stop scheduling
+    try { window.localStorage?.setItem('sterrenhemel_notif_off', '1'); } catch(e) {}
+    notifPermission = 'default';
+    updateNotifUI();
     return;
   }
+  if (!hasNotifAPI) return;
   const perm = await Notification.requestPermission();
   notifPermission = perm;
-  document.getElementById('notifBanner').style.display = 'none';
+  try { window.localStorage?.removeItem('sterrenhemel_notif_off'); } catch(e) {}
+  updateNotifUI();
   if (perm === 'granted') {
     new Notification('✦ Sterrenhemel', {
-      body: 'Meldingen ingeschakeld! Je krijgt herinneringen bij bijzondere events.',
+      body: 'Meldingen ingeschakeld! Je krijgt herinneringen bij astronomie-events.',
       icon: './icon-192.png'
     });
     scheduleNotifications();
   }
 }
 
+// Alias for backward compat
+function requestNotifPermission() { toggleNotifications(); }
+
 function scheduleNotifications() {
   if (notifPermission !== 'granted') return;
+  try { if (window.localStorage?.getItem('sterrenhemel_notif_off') === '1') return; } catch(e) {}
 
-  // Check every hour if there's an upcoming event to notify about
   function checkEvents() {
     const today = new Date();
     const month = today.getMonth() + 1;
     const day = today.getDate();
     const hour = today.getHours();
 
-    // Daily 16:00 stargazing check
     if (hour === 16) {
-      // Trigger weather check notification
       fetch(`https://api.open-meteo.com/v1/forecast?latitude=${userLocation.lat}&longitude=${userLocation.lon}&hourly=cloud_cover&timezone=auto&forecast_days=1`)
         .then(r => r.json())
         .then(data => {
-          const cc = data.hourly.cloud_cover[21]; // 21:00
+          const cc = data.hourly.cloud_cover[21];
           if (cc < 30) {
             new Notification('🌟 Sterrenhemel — Ga naar buiten!', {
-              body: `Vanavond slechts ${cc}% bewolking. Perfecte avond voor sterrenkijken!`,
+              body: `Vanavond slechts ${cc}% bewolking bij ${userLocation.name.split(',')[0]}. Perfecte avond!`,
               icon: './icon-192.png'
             });
           } else if (cc < 50) {
             new Notification('🌤️ Sterrenhemel — Matige condities', {
-              body: `Bewolking vanavond: ${cc}%. De helderste sterren en planeten zijn zichtbaar.`,
+              body: `Bewolking vanavond: ${cc}% bij ${userLocation.name.split(',')[0]}.`,
               icon: './icon-192.png'
             });
           }
         }).catch(() => {});
     }
 
-    // Meteor shower reminders (1 day before peak)
     const meteorAlerts = [
-      { month:4, day:20, name:"Lyriden" },
-      { month:5, day:4, name:"Eta Aquariden" },
-      { month:8, day:11, name:"Perseïden" },
-      { month:10, day:7, name:"Draconiden" },
-      { month:10, day:20, name:"Orioniden" },
-      { month:11, day:15, name:"Leoniden" },
+      { month:4, day:20, name:"Lyriden" }, { month:5, day:4, name:"Eta Aquariden" },
+      { month:8, day:11, name:"Perseïden" }, { month:10, day:7, name:"Draconiden" },
+      { month:10, day:20, name:"Orioniden" }, { month:11, day:15, name:"Leoniden" },
       { month:12, day:12, name:"Geminiden" },
     ];
-    const alert = meteorAlerts.find(a => a.month === month && a.day === day);
-    if (alert && hour === 12) {
-      new Notification(`☄️ ${alert.name} morgen!`, {
-        body: `De ${alert.name} meteorenregen bereikt morgen zijn piek. Kijk na middernacht omhoog!`,
-        icon: './icon-192.png'
-      });
+    const ma = meteorAlerts.find(a => a.month === month && a.day === day);
+    if (ma && hour === 12) {
+      new Notification(`☄️ ${ma.name} morgen!`, { body: `De ${ma.name} bereikt morgen zijn piek!`, icon: './icon-192.png' });
     }
 
-    // Season start reminders
     const seasonAlerts = [
-      { month:3, day:1, title:"🌌 Melkweg-seizoen begint!", body:"De Galactische Kern wordt weer zichtbaar. Tijd om naar Lauwersmeer te gaan!" },
-      { month:5, day:1, title:"🌌 Melkweg piekperiode!", body:"De beste maanden voor Melkweg-fotografie zijn aangebroken (mei–aug)." },
-      { month:4, day:1, title:"🔭 Galaxy Season!", body:"Lente = sterrenstelsel-seizoen. Tijd voor M81, M51 en de Virgo-cluster." },
-      { month:6, day:1, title:"✨ Zomer-nevelseizoen!", body:"Sluiernevel, Noord-Amerika nevel en meer — de zomernevels zijn er weer." },
-      { month:11, day:1, title:"✨ Winter-nevelseizoen!", body:"Orionnevel, Rosette-nevel en Paardekopnevel — winternevels zijn terug!" },
+      { month:3, day:1, title:"🌌 Melkweg-seizoen begint!", body:"De Galactische Kern wordt weer zichtbaar." },
+      { month:5, day:1, title:"🌌 Melkweg piekperiode!", body:"Mei–aug: de beste maanden voor Melkweg-fotografie." },
+      { month:4, day:1, title:"🔭 Galaxy Season!", body:"Lente = sterrenstelsel-seizoen. Tijd voor M81, M51!" },
+      { month:6, day:1, title:"✨ Zomer-nevelseizoen!", body:"Sluiernevel, Noord-Amerika nevel en meer." },
+      { month:11, day:1, title:"✨ Winter-nevelseizoen!", body:"Orionnevel, Rosette-nevel en Paardekopnevel!" },
     ];
-    const sAlert = seasonAlerts.find(a => a.month === month && a.day === day);
-    if (sAlert && hour === 10) {
-      new Notification(sAlert.title, { body: sAlert.body, icon: './icon-192.png' });
+    const sa = seasonAlerts.find(a => a.month === month && a.day === day);
+    if (sa && hour === 10) {
+      new Notification(sa.title, { body: sa.body, icon: './icon-192.png' });
     }
   }
 
-  // Run check now and every hour
   checkEvents();
   setInterval(checkEvents, 60 * 60 * 1000);
 }
 
-// Auto-start if already permitted
-if (notifPermission === 'granted') {
-  scheduleNotifications();
+if (notifPermission === 'granted') { scheduleNotifications(); }
+
+// ===== THEME =====
+let currentTheme = 'dark';
+try { currentTheme = window.localStorage?.getItem('sterrenhemel_theme') || 'dark'; } catch(e) {}
+
+function applyTheme(theme) {
+  currentTheme = theme;
+  const root = document.documentElement;
+  const knob = document.getElementById('themeKnob');
+  const toggle = document.getElementById('themeToggle');
+
+  if (theme === 'light') {
+    root.style.setProperty('--bg', '#f0f0f5');
+    root.style.setProperty('--card', '#ffffff');
+    root.style.setProperty('--card-border', '#d8d8e0');
+    root.style.setProperty('--card-hover', '#e8e8f0');
+    root.style.setProperty('--text', '#1a1a2e');
+    root.style.setProperty('--text-dim', '#5a5a70');
+    root.style.setProperty('--text-faint', '#9090a0');
+    document.body.style.background = '#f0f0f5';
+    document.body.style.color = '#1a1a2e';
+    if (knob) { knob.style.transform = 'translateX(24px)'; knob.textContent = '☀️'; }
+    if (toggle) toggle.style.background = 'var(--accent-blue)';
+  } else {
+    root.style.setProperty('--bg', '#06060f');
+    root.style.setProperty('--card', '#0b0b1a');
+    root.style.setProperty('--card-border', '#14142a');
+    root.style.setProperty('--card-hover', '#1a1a35');
+    root.style.setProperty('--text', '#c8d0e4');
+    root.style.setProperty('--text-dim', '#5a6080');
+    root.style.setProperty('--text-faint', '#333850');
+    document.body.style.background = '#06060f';
+    document.body.style.color = '#c8d0e4';
+    if (knob) { knob.style.transform = 'translateX(0)'; knob.textContent = '🌙'; }
+    if (toggle) toggle.style.background = '#1a1a3a';
+  }
+  try { window.localStorage?.setItem('sterrenhemel_theme', theme); } catch(e) {}
+}
+
+function toggleTheme() {
+  applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
+}
+
+// ===== LANGUAGE =====
+let currentLang = 'nl';
+try { currentLang = window.localStorage?.getItem('sterrenhemel_lang') || 'nl'; } catch(e) {}
+
+function setLanguage(lang) {
+  currentLang = lang;
+  try { window.localStorage?.setItem('sterrenhemel_lang', lang); } catch(e) {}
+
+  document.getElementById('langNL').classList.toggle('active', lang === 'nl');
+  document.getElementById('langEN').classList.toggle('active', lang === 'en');
+
+  const note = document.getElementById('langNote');
+  if (lang === 'en') {
+    note.textContent = 'Language changed to English. Some content (news feeds, seasons) will remain in Dutch in this version. Full translation coming soon!';
+  } else {
+    note.textContent = '';
+  }
+
+  // Update key UI elements
+  const h1 = document.querySelector('.header h1');
+  if (h1) h1.textContent = lang === 'en' ? 'Starry Sky' : 'Sterrenhemel';
+
+  // Update tab labels
+  const tabLabels = lang === 'en'
+    ? ['News', 'Tonight', 'Calendar', 'Dark Sky', '']
+    : ['Nieuws', 'Vanavond', 'Kalender', 'Dark Sky', ''];
+  const tabIcons = ['📰','🔭','📅','🌌','⚙️'];
+  document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+    if (i < tabLabels.length) {
+      btn.innerHTML = `<span class="tab-icon">${tabIcons[i]}</span> ${tabLabels[i]}`;
+    }
+  });
 }
 
 // ===== DARK SKY =====
 renderDarkSky();
+
+// ===== INIT SETTINGS =====
+renderPresetLocations();
+updateNotifUI();
+applyTheme(currentTheme);
+if (currentLang !== 'nl') setLanguage(currentLang);
 
 // ===== SERVICE WORKER REGISTRATION =====
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js')
     .then(reg => {
       console.log('✦ Service Worker registered:', reg.scope);
-      // Check for updates every 30 min
       setInterval(() => reg.update(), 30 * 60 * 1000);
     })
     .catch(err => console.warn('SW registration failed:', err));
