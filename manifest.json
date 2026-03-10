@@ -1,7 +1,8 @@
 {
+  "id": "/sterrenhemel/",
   "name": "Sterrenhemel",
   "short_name": "Sterrenhemel",
-  "description": "Astronomie-dashboard voor sterrenkijken vanuit Marum",
+  "description": "Astronomie-dashboard — weer, nieuws, seizoenen en dark sky locaties",
   "start_url": "/sterrenhemel/",
   "scope": "/sterrenhemel/",
   "display": "standalone",
